@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Sign In</title>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f6fa;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: #ffffff;
+      width: 90%;
+      max-width: 540px;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .class-banner {
+      font-size: 20px;
+      margin-bottom: 25px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #eef2ff;
+      color: #333;
+    }
+
+    input, select {
+      width: 100%;
+      font-size: 22px;
+      padding: 16px;
+      margin-bottom: 18px;
+      border-radius: 14px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      font-size: 24px;
+      padding: 16px;
+      background: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      background: #555;
+      margin-bottom: 15px;
+    }
+
+    button:disabled {
+      background: #aaa;
+    }
+
+    .message {
+      margin-top: 20px;
+      font-size: 20px;
+      min-height: 28px;
+    }
+
+    .success { color: #27ae60; }
+    .error { color: #e74c3c; }
+
+    .admin-panel {
+      display: none;
+      margin-bottom: 25px;
+      border: 1px dashed #ccc;
+      padding: 15px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Student Sign In</h1>
+
+    <div id="classBanner" class="class-banner">
+      No class selected
+    </div>
+
+    <!-- ADMIN BUTTON -->
+    <button class="secondary" onclick="openAdmin()">Select Class (Staff)</button>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel" class="admin-panel">
+      <input
+        id="adminPassword"
+        type="password"
+        placeholder="Admin Password"
+      />
+
+      <select id="classSelect">
+        <option value="">Select class</option>
+      </select>
+
+      <button onclick="setClass()">Lock Class</button>
+    </div>
+
+    <!-- STUDENT SIGN-IN -->
+    <input id="firstName" type="text" placeholder="First Name" autocomplete="off" />
+    <input id="lastName" type="text" placeholder="Last Name" autocomplete="off" />
+    <input id="birthday" type="text" placeholder="Birthday (MM/DD)" inputmode="numeric" />
+
+    <button id="signInBtn" onclick="signIn()">SIGN IN</button>
+
+    <div id="message" class="message"></div>
+  </div>
+
+  <!-- HIDDEN IFRAME FOR FORM POST -->
+  <iframe name="hidden_iframe" style="display:none;"></iframe>
+
+  <script>
+    const SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbwwaMMzAPMJcRSYCtURplBgIQaFTgrpi38VEAPhQcq4bZrJYkkMTFgSs7N1gI8oFFMhhw/exec";
+
+    const ADMIN_PASSWORD_KEY = "AdminPassword";
+    let currentClass = localStorage.getItem("currentClass") || "";
+
+    updateBanner();
+
+    function openAdmin() {
+      document.getElementById("adminPanel").style.display = "block";
+      loadClasses();
+    }
+
+    function loadClasses() {
+      // Classes are hardcoded here to avoid backend changes
+      // Must match Classes sheet
+      const classes = [
+        { code: "A1Tue1600", name: "A1 – Tuesday 4:00 PM" },
+        { code: "D1Sun1300", name: "D1 – Sunday 1:00 PM" },
+        { code: "O1Fri1600", name: "O1 – Friday 4:00 PM" },
+        { code: "O1Sat1300", name: "O1 – Saturday 1:00 PM" },
+        { code: "A1Sat1300", name: "A1 – Saturday 1:00 PM" }
+      ];
+
+      const select = document.getElementById("classSelect");
+      select.innerHTML = `<option value="">Select class</option>`;
+
+      classes.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.code;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+    }
+
+    function setClass() {
+      const password = document.getElementById("adminPassword").value;
+      const selectedClass = document.getElementById("classSelect").value;
+
+      if (password !== "changeMe123") {
+        alert("Incorrect password");
+        return;
+      }
+
+      if (!selectedClass) {
+        alert("Select a class");
+        return;
+      }
+
+      currentClass = selectedClass;
+      localStorage.setItem("currentClass", currentClass);
+      document.getElementById("adminPanel").style.display = "none";
+      updateBanner();
+    }
+
+    function updateBanner() {
+      const banner = document.getElementById("classBanner");
+      if (!currentClass) {
+        banner.textContent = "No class selected";
+      } else {
+        banner.textContent = "Signing into: " + currentClass;
+      }
+    }
+
+    function signIn() {
+      if (!currentClass) {
+        alert("Class not selected. Please see staff.");
+        return;
+      }
+
+      const firstName = document.getElementById("firstName").value.trim();
+      const lastName = document.getElementById("lastName").value.trim();
+      const birthday = document.getElementById("birthday").value.trim();
+      const messageDiv = document.getElementById("message");
+      const button = document.getElementById("signInBtn");
+
+      messageDiv.textContent = "";
+      messageDiv.className = "message";
+
+      if (!firstName || !lastName || !birthday) {
+        messageDiv.textContent = "Please fill in all fields.";
+        messageDiv.classList.add("error");
+        return;
+      }
+
+      if (button.disabled) return;
+      button.disabled = true;
+      messageDiv.textContent = "Signing in…";
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = SCRIPT_URL;
+      form.target = "hidden_iframe";
+
+      const fields = {
+        firstName,
+        lastName,
+        birthday,
+        classCode: currentClass
+      };
+
+      for (const key in fields) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = fields[key];
+        form.appendChild(input);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
+
+      setTimeout(() => {
+        messageDiv.textContent = "Sign-in successful!";
+        messageDiv.classList.add("success");
+        resetForm();
+        button.disabled = false;
+      }, 600);
+    }
+
+    function resetForm() {
+      setTimeout(() => {
+        document.getElementById("firstName").value = "";
+        document.getElementById("lastName").value = "";
+        document.getElementById("birthday").value = "";
+        document.getElementById("message").textContent = "";
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
